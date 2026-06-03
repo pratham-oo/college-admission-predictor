@@ -17,4 +17,4 @@ instance/
 
 # IDE folders
 .vscode/
-.idea/
+.idea/"data/last_year/*.csv" 
