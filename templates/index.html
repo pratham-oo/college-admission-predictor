@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>College Admission Predictor</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 650px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            padding: 20px 24px 30px;
+        }
+        h1 { font-size: 1.8rem; color: #1e3c72; margin: 0 0 5px 0; }
+        .subhead { color: #2a5298; border-left: 4px solid #ff9800; padding-left: 12px; margin: 10px 0 20px 0; font-weight: 500; }
+        .disclaimer {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 12px 15px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #856404;
+        }
+        .disclaimer strong { color: #b45f06; }
+        label { display: block; font-weight: 600; margin: 18px 0 6px 0; color: #1e466e; }
+        select, input, datalist {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background: white;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+        select:focus, input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.2);
+        }
+        select {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            appearance: none;
+        }
+        button {
+            width: 100%;
+            background: #007bff;
+            color: white;
+            padding: 14px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
+            margin-top: 25px;
+            transition: background 0.2s;
+        }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 30px; padding: 18px; border-radius: 14px; word-break: break-word; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info-note { margin-top: 15px; font-size: 0.75rem; color: #5a6268; text-align: center; border-top: 1px solid #ddd; padding-top: 15px; }
+        hr { margin: 20px 0; }
+        @media (max-width: 550px) {
+            body { padding: 12px; }
+            .container { padding: 16px; }
+            h1 { font-size: 1.5rem; }
+            label { margin-top: 14px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🎓 College Admission Predictor</h1>
+    <div class="subhead">Know your chances – Round by round (includes Status: Aided/Unaided/Self Financed)</div>
+
+    <div class="disclaimer">
+        <strong>⚠️ Important Note:</strong> Predictions are based on <strong>last year's cutoff trends</strong> and this year's Round 1 data. 
+        Actual cutoffs may vary. <strong>Do not rely solely on this tool</strong> – use it only as a reference. Always check official sources.
+        <br><br>
+        💡 <strong>Tip for searching colleges:</strong> Type the <strong>first few letters</strong> of your college name (e.g., "patk") and select from suggestions.
+    </div>
+
+    <form method="POST">
+        <label for="college">🏛️ College Name</label>
+        <input list="college-list" id="college" name="college" autocomplete="off" placeholder="Start typing college name..." required>
+        <datalist id="college-list">
+            {% for c in colleges %}
+                <option value="{{ c }}">
+            {% endfor %}
+        </datalist>
+        <small style="display: block; margin-top: 5px; color: #6c757d;">Start typing (e.g., "patkar", "durgabai") – we'll find the closest match.</small>
+
+        <label for="stream">📚 Stream</label>
+        <select id="stream" name="stream" required>
+            <option value="">-- Select --</option>
+            <option value="Arts">Arts</option>
+            <option value="Science">Science</option>
+            <option value="Commerce">Commerce</option>
+        </select>
+
+        <label for="medium">🗣️ Medium</label>
+        <select id="medium" name="medium" required>
+            <option value="">-- Select --</option>
+            <option value="Marathi">Marathi</option>
+            <option value="English">English</option>
+            <option value="Urdu">Urdu</option>
+            <option value="Hindi">Hindi</option>
+            <option value="Gujarati">Gujarati</option>
+        </select>
+
+        <label for="status">🏫 College Type (Status)</label>
+        <select id="status" name="status" required>
+            <option value="">-- Select --</option>
+            <option value="Aided">Aided</option>
+            <option value="Un-Aided">Un-Aided</option>
+            <option value="Self Financed">Self Financed</option>
+            <option value="Partially Aided (20%-80%)">Partially Aided</option>
+            <option value="Government / Local Body">Government / Local Body</option>
+        </select>
+
+        <label for="reservation">📌 Reservation Category</label>
+        <select id="reservation" name="reservation" required>
+            <option value="">-- Select --</option>
+            <option value="Remaining seats (Pure)">General (Open)</option>
+            <option value="Women (30%)">Women (30%)</option>
+            <option value="Trf./Ex.Sr./Ser/Sports (5%)">Sports / Ex-Servicemen</option>
+        </select>
+
+        <label for="score">🎯 Your Score (out of 500/400)</label>
+        <input type="number" id="score" name="score" step="1" placeholder="e.g., 413" required>
+
+        <button type="submit">🔍 Predict Admission Round</button>
+    </form>
+
+    {% if result %}
+        <hr>
+        <div class="result {% if result.error %}error{% else %}success{% endif %}">
+            {% if result.error %}
+                <strong>⚠️ {{ result.error }}</strong>
+            {% else %}
+                <div style="font-size: 1.1rem; margin-bottom: 10px;">✅ <strong>Good news!</strong></div>
+                <div><strong>College:</strong> {{ result.college }}</div>
+                <div><strong>Stream:</strong> {{ result.stream }} | <strong>Medium:</strong> {{ result.medium }}</div>
+                <div><strong>Status:</strong> {{ result.status }} | <strong>Category:</strong> {{ result.reservation }}</div>
+                <div><strong>Your Score:</strong> {{ result.score }}</div>
+                <div style="margin-top: 12px; font-size: 1.2rem;">
+                    🎉 You are likely to get admission by <strong>Round {{ result.round }}</strong>
+                </div>
+                <small style="display: block; margin-top: 12px;">💡 Be patient – cutoffs drop each round. If you don't get in Round 1, wait for later rounds.</small>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div class="info-note">
+        📊 Predictions are generated using last year's 18 rounds and this year's Round 1 cutoffs.<br>
+        This is an <strong>estimation</strong> – final results depend on actual competition and seat availability.
+    </div>
+</div>
+</body>
+</html>

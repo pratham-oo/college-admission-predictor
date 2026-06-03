@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+env/
+
+# Large data files (adjust if you want to keep them)
+data/combined_all_rounds.csv
+data/predicted_rounds.csv
+data/last_year/*.csv   # if you want to exclude raw round CSVs
+
+# Flask debug logs
+instance/
+.env
+
+# IDE folders
+.vscode/
+.idea/
