@@ -1,41 +1,47 @@
 from flask import Flask, render_template, request
 import pandas as pd
-import ast
 from rapidfuzz import process, fuzz
+import numpy as np
 
 app = Flask(__name__)
 
+# Load predictions
 df = pd.read_csv("data/predicted_rounds.csv")
-df["last_year_progression"] = df["last_year_progression"].apply(ast.literal_eval)
 
-all_colleges = df["College Name"].unique()
+# Ensure all predicted columns exist; if not, create with NaN
+for r in range(2, 19):
+    col = f"Predicted_R{r}"
+    if col not in df.columns:
+        df[col] = np.nan
 
+# Get unique college names for autocomplete
+all_colleges = sorted(df["College Name"].unique())
+
+# Aliases for common college names
 college_aliases = {
     "patkar": "S. S. & L. S. PATKAR COLLEGE",
     "bhavans": "BHAVAN'S COLLEGE, ANDHERI",
     "dhanukar": "DHANUKAR COLLEGE",
+    # add more as needed
 }
 
-def predict_round(row, student_score):
-    prog = row["last_year_progression"]
-    this_year_r1 = row["R1_this_year"]
-    if student_score >= this_year_r1:
+def predict_round_for_score(row, student_score):
+    """
+    Given a row from df (with R1_this_year and Predicted_R2..R18),
+    return the earliest round (1..18) where predicted cutoff <= score,
+    or None if never.
+    """
+    r1 = row.get("R1_this_year")
+    if pd.isna(r1):
+        return None
+    if student_score >= r1:
         return 1
-    first_round = min(prog.keys())
-    last_round = max(prog.keys())
-    first_cutoff = prog[first_round]
-    last_cutoff = prog[last_round]
-    if student_score < last_cutoff:
-        return None
-    total_drop = first_cutoff - last_cutoff
-    total_rounds = last_round - first_round
-    if total_drop <= 0 or total_rounds <= 0:
-        return None
-    drop_per_round = total_drop / total_rounds
-    points_needed = this_year_r1 - student_score
-    rounds_needed = int((points_needed + drop_per_round - 1) // drop_per_round)
-    predicted = first_round + rounds_needed
-    return min(predicted, 18)
+    # Check from R2 onwards
+    for r in range(2, 19):
+        col = f"Predicted_R{r}"
+        if col in row and pd.notna(row[col]) and student_score >= row[col]:
+            return r
+    return None
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -50,8 +56,9 @@ def index():
             score = float(request.form["score"])
         except ValueError:
             result = {"error": "Please enter a valid numeric score."}
-            return render_template("index.html", result=result, colleges=sorted(all_colleges))
+            return render_template("index.html", result=result, colleges=all_colleges)
         
+        # Find actual college name
         lower_input = college_input.lower()
         actual_college = college_aliases.get(lower_input)
         if not actual_college:
@@ -64,8 +71,9 @@ def index():
                     result = {"error": f"College '{college_input}' not found. Did you mean: {', '.join(suggestions[:5])}?"}
                 else:
                     result = {"error": f"College '{college_input}' not found in our data. It may not participate in CAP."}
-                return render_template("index.html", result=result, colleges=sorted(all_colleges))
+                return render_template("index.html", result=result, colleges=all_colleges)
         
+        # Filter
         mask = (
             (df["College Name"] == actual_college) &
             (df["Stream"] == stream_input) &
@@ -91,7 +99,7 @@ def index():
                 error_msg += f" Available reservations: {', '.join(reservations)}."
             result = {"error": error_msg}
         else:
-            pred_round = predict_round(row.iloc[0], score)
+            pred_round = predict_round_for_score(row.iloc[0], score)
             if pred_round:
                 result = {
                     "college": actual_college,
@@ -103,8 +111,8 @@ def index():
                     "round": pred_round
                 }
             else:
-                result = {"error": f"Your score {score} is below the final cutoff from last year for {actual_college} ({status_input}). Unlikely to get admission in this category."}
-    return render_template("index.html", result=result, colleges=sorted(all_colleges))
+                result = {"error": f"Your score {score} is below the final predicted cutoff for {actual_college} ({status_input}). Unlikely to get admission in this category."}
+    return render_template("index.html", result=result, colleges=all_colleges)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
